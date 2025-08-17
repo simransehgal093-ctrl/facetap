@@ -1,15 +1,101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Photo-AI</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-    <link rel="icon" type="image/png" href="favicon.png" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Recognition</title>
+  <style>
+    img {
+      max-width: 400px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    button {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Face Recognition App</h1>
+
+  <h2>Event Photo</h2>
+  <img src="https://static01.nyt.com/images/2025/01/24/multimedia/24dc-musk-doge-topart-kmlf/24dc-musk-doge-topart-kmlf-articleLarge.jpg?quality=75&auto=webp&disable=upscale" alt="Event Photo">
+  <button id="encodeEventButton">Encode Event Image</button>
+  <p id="eventResult"></p>
+
+  <h2>Selfie Photo</h2>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Elon_Musk_Royal_Society.jpg/399px-Elon_Musk_Royal_Society.jpg" alt="Selfie Photo">
+  <button id="encodeSelfieButton">Encode Selfie Image</button>
+  <p id="selfieResult"></p>
+
+  <h2>Compare Faces</h2>
+  <button id="compareButton">Compare Faces</button>
+  <p id="compareResult"></p>
+
+  <script>
+    let eventEncodings = [];
+    let selfieEncoding = null;
+
+    // Hardcoded image URLs
+    const eventImageUrl = "https://static01.nyt.com/images/2025/01/24/multimedia/24dc-musk-doge-topart-kmlf/24dc-musk-doge-topart-kmlf-articleLarge.jpg?quality=75&auto=webp&disable=upscale"
+    const selfieImageUrl = "https://www.shutterstock.com/image-photo/paris-france-june-16-2023-260nw-2318800285.jpg"
+
+    document.getElementById("encodeEventButton").addEventListener("click", function() {
+      fetch("/encode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_url: eventImageUrl })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById("eventResult").innerText = data.error;
+        } else {
+          eventEncodings = data.encodings;
+          document.getElementById("eventResult").innerText = `Encoded ${data.num_faces} face(s) in event image.`;
+        }
+      })
+      .catch(error => console.error("Error:", error));
+    });
+
+    document.getElementById("encodeSelfieButton").addEventListener("click", function() {
+      fetch("/encode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_url: selfieImageUrl })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById("selfieResult").innerText = data.error;
+        } else {
+          selfieEncoding = data.encodings[0];
+          document.getElementById("selfieResult").innerText = `Encoded ${data.num_faces} face(s) in selfie image.`;
+        }
+      })
+      .catch(error => console.error("Error:", error));
+    });
+
+    document.getElementById("compareButton").addEventListener("click", function() {
+      if (!eventEncodings.length || !selfieEncoding) {
+        document.getElementById("compareResult").innerText = "Please encode both images first.";
+        return;
+      }
+
+      fetch("/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_encodings: eventEncodings,
+          selfie_encoding: selfieEncoding
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById("compareResult").innerText = data.match_found ? "Face Match Found!" : "No Match Found.";
+      })
+      .catch(error => console.error("Error:", error));
+    });
+  </script>
+</body>
 </html>
